@@ -1,6 +1,7 @@
 <!doctype html>
-<html>
+<html lang="pt-BR">
   <head>
+    <meta charset="UTF-8" />
     <title>Controle IoT</title>
   </head>
   <body>
@@ -12,32 +13,67 @@
     <script src="https://unpkg.com/paho-mqtt/mqttws31.min.js"></script>
 
     <script>
-      const client = new Paho.MQTT.Client(
-        "broker.hivemq.com",
-        8000,
-        "web_" + parseInt(Math.random() * 1000),
-      );
+      const BROKER = "broker.hivemq.com";
+      const PORT = 8884;
+      const TOPIC = "kaillane/iot/led01";
+
+      const clientID = "web_" + Math.floor(Math.random() * 10000);
+
+      const client = new Paho.MQTT.Client(BROKER, PORT, clientID);
+
+      let conectado = false;
 
       client.onConnectionLost = function (responseObject) {
-        console.log("Conexão perdida");
+        console.log("Conexão perdida:", responseObject);
+        conectado = false;
       };
 
-      client.connect({
-        onSuccess: () => {
-          console.log("Conectado ao broker");
-        },
-      });
+      client.onMessageArrived = function (message) {
+        console.log("Mensagem recebida:", message.payloadString);
+      };
+
+      function conectarMQTT() {
+        console.log("Tentando conectar ao broker...");
+
+        client.connect({
+          useSSL: true,
+          timeout: 5,
+          onSuccess: () => {
+            console.log("Conectado ao broker MQTT");
+            conectado = true;
+          },
+          onFailure: (err) => {
+            console.log("Erro ao conectar:", err);
+            conectado = false;
+
+            setTimeout(conectarMQTT, 2000);
+          },
+        });
+      }
+
+      conectarMQTT();
+
+      function enviarMensagem(valor) {
+        if (!conectado) {
+          console.log("Ainda não conectado ao broker");
+          return;
+        }
+
+        const message = new Paho.MQTT.Message(valor);
+        message.destinationName = TOPIC;
+
+        client.send(message);
+        console.log("Mensagem enviada:", valor);
+      }
 
       function ligar() {
-        const message = new Paho.MQTT.Message("1");
-        message.destinationName = "frankai/led";
-        client.send(message);
+        console.log("Botão Ligar clicado");
+        enviarMensagem("1");
       }
 
       function desligar() {
-        const message = new Paho.MQTT.Message("0");
-        message.destinationName = "frankai/led";
-        client.send(message);
+        console.log("Botão Desligar clicado");
+        enviarMensagem("0");
       }
     </script>
   </body>

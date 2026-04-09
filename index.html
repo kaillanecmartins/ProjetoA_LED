@@ -1,6 +1,7 @@
 <!doctype html>
-<html>
+<html lang="pt-BR">
   <head>
+    <meta charset="UTF-8" />
     <title>Controle IoT</title>
   </head>
   <body>
@@ -12,42 +13,49 @@
     <script src="https://unpkg.com/paho-mqtt/mqttws31.min.js"></script>
 
     <script>
-      const BROKER = "broker.emqx.io";
-      const PORT = 8084;
       const TOPIC = "frankai/led";
 
       const client = new Paho.MQTT.Client(
-        BROKER,
-        PORT,
+        "broker.hivemq.com",
+        8884,
         "web_" + Math.floor(Math.random() * 10000),
       );
 
       let conectado = false;
 
-      client.onConnectionLost = (res) => {
-        console.log("Conexão perdida", res);
+      client.onConnectionLost = function (responseObject) {
+        console.log("Conexão perdida:", responseObject);
         conectado = false;
+        setTimeout(conectarMQTT, 2000);
       };
 
-      function conectar() {
+      function conectarMQTT() {
+        console.log("Conectando ao HiveMQ...");
+
         client.connect({
           useSSL: true,
+          timeout: 5,
+          cleanSession: true,
+
           onSuccess: () => {
-            console.log("Conectado!");
+            console.log("Conectado ao HiveMQ!");
             conectado = true;
           },
-          onFailure: (err) => {
-            console.log("Erro:", err);
-            setTimeout(conectar, 2000);
+
+          onFailure: (erro) => {
+            console.log("Erro na conexão:", erro);
+            conectado = false;
+
+            setTimeout(conectarMQTT, 2000);
           },
         });
       }
 
-      conectar();
+      conectarMQTT();
 
       function enviar(valor) {
         if (!conectado) {
-          console.log("Não conectado");
+          console.log("Ainda não conectado!");
           return;
         }
 
@@ -59,10 +67,12 @@
       }
 
       function ligar() {
+        console.log("Clique: ligar");
         enviar("1");
       }
 
       function desligar() {
+        console.log("Clique: desligar");
         enviar("0");
       }
     </script>
